@@ -151,10 +151,8 @@ For every patient, the viewer reports a full breakdown:
 
 | Metric | Validation | Test |
 |---|---|---|
-| Dice | *add* | *add* |
-| IoU | *add* | *add* |
-| Precision | *add* | *add* |
-| Recall | *add* | *add* |
+| Mean Dice | 0.785 | 0.776 |
+| Mean IoU | 0.671 | 0.681 |
 
 ---
 
