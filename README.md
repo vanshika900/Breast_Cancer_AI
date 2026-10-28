@@ -65,7 +65,7 @@ On top of the model, this repo includes a **browser-based 3D viewer** where you 
 | | |
 |---|---|
 | **Source cohort** | **I-SPY1**, a breast cancer MRI cohort from a neoadjuvant (pre-surgery) chemotherapy trial |
-| **Prepared version** | `BreastDCEDL`, a curated, tumor-cropped version of I-SPY1 (`ISPY1_min_crop`) |
+| **Prepared version** | [**BreastDCEDL**](https://zenodo.org/records/17274053) (Fridman et al., 2025), a curated, deep-learning-ready release of I-SPY1, I-SPY2 and Duke DCE-MRI from TCIA. This project uses the **I-SPY1** part, tumor-cropped (`ISPY1_min_crop`) |
 | **Imaging type** | **DCE-MRI** (Dynamic Contrast-Enhanced MRI), 3D volumes |
 | **Input channels** | 3 DCE time-points per patient (`dce_0`, `dce_1`, `dce_2`), stacked as 3 input channels |
 | **Ground truth** | An expert tumor mask for every patient (`mask.nii.gz`) |
@@ -76,7 +76,7 @@ On top of the model, this repo includes a **browser-based 3D viewer** where you 
 **Why I-SPY1 and not the larger MAMA-MIA dataset?**
 MAMA-MIA combines several sub-datasets with different protocols and different segmentation styles. I chose to work on **one well-defined cohort that I could clean, understand and explain end to end**, rather than mix sources I couldn't fully control. A focused, reproducible study beats a sprawling one.
 
-> 🔒 **Data is not included in this repo.** Medical imaging data has licensing and privacy rules, so only code is shared. Get the data from its original source (I-SPY1 on The Cancer Imaging Archive, and the BreastDCEDL release: *[add link]*).
+> 🔒 **Data is not included in this repo.** Medical imaging data has licensing and privacy rules, so only code is shared. Download BreastDCEDL from its official release on Zenodo: **https://zenodo.org/records/17274053** (it is a large download, so check the file sizes first). Dataset paper: [arXiv:2506.12190](https://arxiv.org/abs/2506.12190). The dataset authors' code: [github.com/naomifridman/BreastDCEDL](https://github.com/naomifridman/BreastDCEDL).
 
 ---
 
@@ -241,10 +241,9 @@ Notebook outputs are cleared before upload so that no patient-level information 
 
 - Isensee, F. et al. *nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation.* **Nature Methods**, 2021.
 - I-SPY1 breast MRI data, via The Cancer Imaging Archive (TCIA).
-- BreastDCEDL dataset: *[add link]*.
+- Fridman, N., Solway, B., Fridman, T., Barnea, I., Goldstein, A. *BreastDCEDL: A Comprehensive Breast Cancer DCE-MRI Dataset and Transformer Implementation for Treatment Response Prediction.* arXiv:2506.12190, 2025. https://arxiv.org/abs/2506.12190
 
 **Author:** Vanshika · B.Tech, Jaypee Institute of Information Technology, Noida
-**Guided by:** *[add your teacher's name]*
 
 📬 Questions or feedback? Open an issue or reach out via my GitHub profile.
 
