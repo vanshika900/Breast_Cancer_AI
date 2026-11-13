@@ -1,252 +1,360 @@
 <div align="center">
 
 # 🎗️ Breast Cancer AI
-### 3D Breast Tumor Segmentation on DCE-MRI with nnU-Net, plus an Interactive 3D Viewer
+### 3D Breast Tumor Segmentation and pCR Prediction Using DCE-MRI, nnU-Net, ViT-MAE and Clinical Features
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![nnU-Net](https://img.shields.io/badge/nnU--Net-v2-8A2BE2)
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
-![Colab](https://img.shields.io/badge/Google%20Colab-F9AB00?logo=googlecolab&logoColor=white)
+![Transformers](https://img.shields.io/badge/Hugging%20Face-Transformers-yellow)
 ![Dataset](https://img.shields.io/badge/Dataset-I--SPY1-0b7285)
-![Task](https://img.shields.io/badge/Task-3D%20Tumor%20Segmentation-d6336c)
+![Tasks](https://img.shields.io/badge/Tasks-Segmentation%20%7C%20pCR%20Prediction-d6336c)
 
-### 👉 [**Launch the Live 3D Tumor Viewer**](https://vanshika900.github.io/Breast_Cancer_AI/) 👈
+### 👉 [**Launch the Interactive 3D Tumor Viewer**](https://vanshika900.github.io/Breast_Cancer_AI/) 👈
 
 <img src="images/viewer_overview.png" alt="3D tumor viewer showing ground truth, model prediction and their overlap" width="900"/>
 
-*Spin it, zoom into it, and see exactly where the AI agrees with the radiologist, and where it doesn't.*
+*Explore 3D tumor segmentations and compare model predictions with expert annotations.*
 
 </div>
 
 ---
 
 ## 📖 Table of Contents
-1. [What is this project?](#-what-is-this-project)
-2. [Why it matters](#-why-it-matters)
-3. [The dataset](#-the-dataset)
-4. [What makes this project different](#-what-makes-this-project-different)
-5. [Pipeline at a glance](#-pipeline-at-a-glance)
-6. [What each notebook does](#-what-each-notebook-does)
-7. [Model and training setup](#-model-and-training-setup)
-8. [Evaluation metrics](#-evaluation-metrics)
-9. [The interactive 3D viewer](#-the-interactive-3d-viewer)
-10. [Repository structure](#-repository-structure)
-11. [How to reproduce](#-how-to-reproduce)
-12. [Limitations and future work](#-limitations-and-future-work)
-13. [References and credits](#-references-and-credits)
+
+1. [Project Overview](#-project-overview)
+2. [Research Question and Objectives](#-research-question-and-objectives)
+3. [Dataset](#-dataset)
+4. [End-to-End Pipeline](#-end-to-end-pipeline)
+5. [Methodology](#-methodology)
+6. [Experimental Results](#-experimental-results)
+7. [Interactive 3D Viewer](#-interactive-3d-viewer)
+8. [Repository Structure](#-repository-structure)
+9. [Reproducibility](#-reproducibility)
+10. [Limitations and Future Work](#-limitations-and-future-work)
+11. [References and Credits](#-references-and-credits)
 
 ---
 
-## 🧠 What is this project?
+## 🧠 Project Overview
 
-Breast MRI gives doctors a detailed 3D look inside the breast, but **outlining a tumor by hand, slice by slice, is slow and varies from one reader to another.** This project trains a deep learning model to do that outlining (**segmentation**) automatically.
+Pathological complete response (pCR) after neoadjuvant treatment is an important outcome in breast cancer research. This project investigates an end-to-end pipeline that combines automated 3D tumor segmentation, imaging representation learning and clinical variables to study pCR prediction from Dynamic Contrast-Enhanced Magnetic Resonance Imaging (DCE-MRI).
 
-In plain words:
+The workflow has two connected parts:
 
-> **Input:** a breast MRI scan taken before and after a contrast dye is injected.
-> **Output:** a 3D mask that marks exactly which voxels belong to the tumor.
+1. **Tumor segmentation:** nnU-Net is used to segment breast tumors from multiphase DCE-MRI.
+2. **pCR prediction:** tumor-aware image crops are processed using a pretrained Vision Transformer with a Masked Autoencoder (ViT-MAE). Patient-level imaging representations are then evaluated alongside clinical features using machine-learning classifiers.
 
-On top of the model, this repo includes a **browser-based 3D viewer** where you can open any patient, rotate the tumor, and compare the AI's prediction against the expert ground truth, with per-patient metrics shown next to it.
+The classification experiments compare three feature settings:
 
----
+- Clinical-only
+- Imaging-only
+- Combined clinical and imaging features
 
-## 💡 Why it matters
+The aim is to investigate whether imaging representations provide additional predictive information beyond clinical variables.
 
-- **Faster, more consistent measurements.** Tumor size and volume feed into treatment monitoring. An automatic mask can make them quicker to get and more repeatable.
-- **Explainable by design.** Instead of a single score, the viewer shows *where* the model is right (purple), misses tumor (blue), or over-predicts (red).
-- **A foundation for more.** A good segmentation is the first step for tumor-volume tracking and for studying how tumor features relate to treatment response.
-
-> ⚠️ **Research project only. Not a medical device and not for clinical use.**
+> **Research project only. Not a medical device. The models are not intended for diagnosis, treatment selection or clinical decision-making.**
 
 ---
 
-## 🗂️ The dataset
+## 🎯 Research Question and Objectives
 
-| | |
+**Research question:** Do tumor-aware imaging representations learned from DCE-MRI provide additional information for pCR prediction beyond clinical variables alone?
+
+Objectives:
+
+1. Develop and evaluate an automated 3D breast tumor segmentation pipeline using nnU-Net.
+2. Generate tumor-aware image crops from segmentation predictions while avoiding ground-truth mask leakage into downstream training crops.
+3. Learn patient-level imaging representations using ViT-MAE.
+4. Compare clinical-only, imaging-only and combined models for pCR prediction.
+
+---
+
+## 🗂️ Dataset
+
+The project uses the **I-SPY1** cohort from the [BreastDCEDL dataset](https://zenodo.org/records/17274053), a curated DCE-MRI release derived from The Cancer Imaging Archive (TCIA).
+
+| Attribute | Description |
 |---|---|
-| **Source cohort** | **I-SPY1**, a breast cancer MRI cohort from a neoadjuvant (pre-surgery) chemotherapy trial |
-| **Prepared version** | [**BreastDCEDL**](https://zenodo.org/records/17274053) (Fridman et al., 2025), a curated, deep-learning-ready release of I-SPY1, I-SPY2 and Duke DCE-MRI from TCIA. This project uses the **I-SPY1** part, tumor-cropped (`ISPY1_min_crop`) |
-| **Imaging type** | **DCE-MRI** (Dynamic Contrast-Enhanced MRI), 3D volumes |
-| **Input channels** | 3 DCE time-points per patient (`dce_0`, `dce_1`, `dce_2`), stacked as 3 input channels |
-| **Ground truth** | An expert tumor mask for every patient (`mask.nii.gz`) |
-| **Scanners** | Multi-vendor: **GE, Siemens and Philips** scanners across multiple imaging sites |
-| **Splits** | Patient-level **train / validation / test** split, stored in one master table |
-| **Clinical metadata** | Age, ER / PR / HER2 status, receptor subtype (HR+/HER2-, HER2+, triple-negative), pCR, RCB class, tumor VOI size |
+| Cohort | I-SPY1 |
+| Imaging modality | Dynamic Contrast-Enhanced MRI (DCE-MRI) |
+| Input phases | Three DCE time-points |
+| Segmentation annotation | Expert tumor masks |
+| Clinical information | Includes age, ER, PR, HER2 and other available variables |
+| Total patients | 172 |
+| Patients with known pCR labels | 171 |
 
-**Why I-SPY1 and not the larger MAMA-MIA dataset?**
-MAMA-MIA combines several sub-datasets with different protocols and different segmentation styles. I chose to work on **one well-defined cohort that I could clean, understand and explain end to end**, rather than mix sources I couldn't fully control. A focused, reproducible study beats a sprawling one.
+### MRI input channels
 
-> 🔒 **Data is not included in this repo.** Medical imaging data has licensing and privacy rules, so only code is shared. Download BreastDCEDL from its official release on Zenodo: **https://zenodo.org/records/17274053** (it is a large download, so check the file sizes first). Dataset paper: [arXiv:2506.12190](https://arxiv.org/abs/2506.12190). The dataset authors' code: [github.com/naomifridman/BreastDCEDL](https://github.com/naomifridman/BreastDCEDL).
+| Channel | Description |
+|---|---|
+| DCE-0 | Pre-contrast |
+| DCE-1 | Early post-contrast |
+| DCE-2 | Late post-contrast |
+
+### Patient-level data split
+
+| Split | Patients |
+|---|---:|
+| Training | 120 |
+| Validation | 26 |
+| Test | 26 |
+| **Total** | **172** |
+
+One patient has a missing pCR label. That patient can participate in representation learning, which does not require pCR labels, but is excluded from supervised classification.
+
+The dataset itself is not included in this repository. Users must obtain it from the [BreastDCEDL Zenodo release](https://zenodo.org/records/17274053) and configure their own paths. See the [dataset paper](https://arxiv.org/abs/2506.12190) and the [dataset authors' repository](https://github.com/naomifridman/BreastDCEDL).
 
 ---
 
-## ✨ What makes this project different
-
-- 🧹 **Built the dataset properly first.** Dedicated notebooks for exploration and cleaning, ending in a single **master table** that links every patient's 3 DCE volumes, mask, clinical data and train/val/test split.
-- 🧩 **Handled messy real-world MRI.** Different scanners, different imaging sites, and not every patient has the same set of time-points. The pipeline had to cope with that.
-- 🧠 **Used nnU-Net, a self-configuring U-Net framework.** It adapts the patch size, spacing and training plan to the dataset, and is a strong, widely respected baseline in medical image segmentation.
-- 🗳️ **5-fold ensemble, not a single model.** Five models are trained on different folds and combined for more stable predictions.
-- 🎚️ **Threshold chosen on the validation set** (not on the test set), to avoid tuning on data used for the final check.
-- 🧊 **Built my own interactive 3D viewer.** Three-colour comparison of truth vs prediction, per-patient metrics, volume comparison and dataset-split filtering, all in the browser, no install needed.
-
----
-
-## 🔄 Pipeline at a glance
+## 🔄 End-to-End Pipeline
 
 ```mermaid
-flowchart LR
-    A[I-SPY1 DCE-MRI<br/>3 time-points + tumor mask] --> B[01 Explore<br/>data]
-    B --> C[02 Clean and build<br/>master table + splits]
-    C --> D[Convert to<br/>nnU-Net format]
-    D --> E[nnU-Net preprocessing<br/>resample + z-score]
-    E --> F[03 Train<br/>5-fold 3D U-Net]
-    F --> G[Ensemble prediction<br/>+ validation-selected threshold]
-    G --> H[Per-patient metrics]
-    G --> I[05 3D visualisation]
-    I --> J[Interactive HTML viewer]
+flowchart TD
+    A[I-SPY1 multiphase DCE-MRI] --> B[Data exploration and cleaning]
+    B --> C[Patient-level train / validation / test split]
+    C --> D[3D nnU-Net segmentation]
+    D --> E[OOF predictions for training patients]
+    D --> F[Predictions for validation and test patients]
+    E --> G[Tumor-aware crop extraction]
+    F --> G
+    G --> H[ViT-MAE representation learning]
+    H --> I[768-dimensional patient-level image features]
+    J[Clinical variables] --> K[Clinical-only model]
+    I --> L[Imaging-only model]
+    I --> M[Combined clinical + imaging model]
+    J --> M
+    K --> N[Model evaluation]
+    L --> N
+    M --> N
 ```
 
 ---
 
-## 📓 What each notebook does
+## 🧪 Methodology
 
-| Notebook | Purpose |
+### 1. Data preparation
+
+The data preparation workflow creates a patient-level master table linking DCE-MRI volumes, segmentation masks, clinical variables and dataset assignments. The three DCE phases are checked to ensure consistent channel ordering.
+
+Patient-level splitting is used so that scans from the same patient do not appear across different data partitions.
+
+### 2. Automated tumor segmentation — nnU-Net
+
+A 3D nnU-Net v2 model was trained using five-fold cross-validation with the `3d_fullres` configuration and three DCE-MRI input channels.
+
+**Out-of-fold (OOF) predictions** were generated for training patients: each patient's training segmentation prediction comes from a fold model for which that patient was held out. These predictions are used for downstream training crop extraction.
+
+Validation and test patients are processed using trained nnU-Net models. Predicted masks, rather than expert ground-truth masks, are used to create downstream crops for all three partitions.
+
+Segmentation performance is evaluated using Dice Similarity Coefficient (DSC) and Intersection over Union (IoU).
+
+### 3. Tumor-aware crop extraction
+
+Predicted masks identify tumor-containing slices and guide crop extraction.
+
+The implemented crop workflow:
+
+- Uses OOF predicted masks for training patients.
+- Uses predicted masks for validation and test patients.
+- Extracts tumor-containing slices.
+- Uses a 128 × 128 pixel region centred on the predicted 3D tumor bounding-box centre.
+- Resizes crops to 224 × 224.
+- Retains the three DCE phases as image channels.
+- Applies percentile-based intensity normalization.
+
+The crops retain surrounding breast tissue rather than isolating only the predicted tumor pixels.
+
+### 4. Imaging representation learning — ViT-MAE
+
+The pretrained `facebook/vit-mae-base` checkpoint is used for visual representation learning.
+
+| Parameter | Configuration |
 |---|---|
-| [`01_ISPY1_Data_Exploration.ipynb`](01_ISPY1_Data_Exploration.ipynb) | First look at the data: patients, scan shapes, tumor sizes, scanner and site distribution, clinical variables. Understand the data before touching a model. |
-| [`02_ISPY1_Data_Cleaning.ipynb`](02_ISPY1_Data_Cleaning.ipynb) | Cleans the data and builds the **master table** (`patient_master.csv`): one row per patient with paths to the 3 DCE volumes and the mask, clinical metadata, tumor bounding-box (VOI) information, and the train / validation / test assignment. |
-| [`03_ISPY1_UNet_Training.ipynb`](03_ISPY1_UNet_Training.ipynb) | Sets up and trains the nnU-Net 3D segmentation model across 5 folds. |
-| [`05_Segmentation_3D_Visualization.ipynb`](05_Segmentation_3D_Visualization.ipynb) | Takes the predictions and ground truth, computes the per-patient metrics, builds 3D surfaces, and exports the interactive viewer as a single HTML file. |
+| Architecture | ViT-MAE Base |
+| Pretrained checkpoint | `facebook/vit-mae-base` |
+| Input resolution | 224 × 224 |
+| Patch size | 16 × 16 |
+| Hidden dimension | 768 |
+| Transformer layers | 12 |
+| Masking ratio during adaptation | 0.75 |
+| Fine-tuning epochs | 5 |
+| Optimizer | AdamW |
+| Learning rate | 1e-5 |
+
+The model is adapted using training-patient crops. The encoder is then used to extract slice-level CLS-token representations with masking disabled. Slice representations are averaged to obtain one 768-dimensional feature vector per patient.
+
+### 5. pCR classification
+
+Three feature configurations are evaluated:
+
+| Experiment | Input features |
+|---|---|
+| Clinical-only | Clinical variables |
+| Imaging-only | 768-dimensional ViT-MAE patient representations |
+| Combined | Clinical variables + ViT-MAE representations |
+
+Logistic Regression is used as the primary classifier. PCA-based dimensionality reduction is investigated for imaging features.
+
+Imputation, scaling and PCA are fitted within the cross-validation pipeline to reduce data leakage. Repeated stratified cross-validation is used for model selection. The classification threshold is selected using training-only out-of-fold predictions before final test evaluation.
 
 ---
 
-## 🏗️ Model and training setup
+## 📊 Experimental Results
 
-| Setting | Value |
-|---|---|
-| Framework | **nnU-Net v2** (self-configuring U-Net) |
-| Configuration | `3d_fullres`, a full 3D model that sees the whole tumor volume in context |
-| Input | 3 channels (3 DCE time-points) |
-| Voxel spacing | Resampled to **1.0 × 1.0 × 1.0 mm** |
-| Normalisation | **Z-score**, applied per channel |
-| Patch size | 256 × 256 × 32 |
-| Batch size | 2 |
-| Training | **5-fold cross-validation**, predictions combined as an ensemble |
-| Post-processing | Probability threshold of **0.65**, selected on the validation set |
+The following values are from the final recorded evaluation.
+
+### 1. Segmentation results
+
+| Cohort | Patients | Mean Dice |
+|---|---:|---:|
+| Training (OOF) | 120 | 0.733 |
+| Validation | 26 | 0.784 |
+| Test | 26 | 0.737 |
+| **Overall** | **172** | **0.742** |
+
+### 2. pCR classification — test set
+
+| Metric | Clinical-only | Imaging-only | Combined |
+|---|---:|---:|---:|
+| Threshold | 0.52 | 0.53 | 0.29 |
+| ROC-AUC | **0.8403** | 0.5208 | 0.7639 |
+| PR-AUC | **0.7240** | 0.5098 | 0.6559 |
+| Sensitivity | **0.7500** | 0.3750 | 0.5000 |
+| Specificity | 0.7222 | 0.7222 | **0.8333** |
+| Precision | 0.5455 | 0.3750 | **0.5714** |
+| F1-score | **0.6316** | 0.3750 | 0.5333 |
+
+### 3. Confusion matrices
+
+Rows represent actual classes and columns represent predicted classes, ordered as non-pCR (0) and pCR (1).
+
+| Model | TN | FP | FN | TP |
+|---|---:|---:|---:|---:|
+| Clinical-only | 13 | 5 | 2 | 6 |
+| Imaging-only | 13 | 5 | 5 | 3 |
+| Combined | 15 | 3 | 4 | 4 |
+
+### 4. Interpretation
+
+In this experiment, the clinical-only model achieved the highest test ROC-AUC, PR-AUC, sensitivity and F1-score. The imaging-only model showed limited discrimination on the test set.
+
+The combined model achieved higher specificity and precision than the clinical-only model, but did not improve overall discrimination or F1-score.
+
+These results do not demonstrate that the learned imaging representations improve pCR prediction beyond the clinical variables in this cohort. The findings should be interpreted cautiously given the small dataset and limited number of pCR-positive test cases. They motivate further investigation of imaging preprocessing, tumor localization and representation learning.
 
 ---
 
-## 📏 Evaluation metrics
+## 🧊 Interactive 3D Viewer
 
-For every patient, the viewer reports a full breakdown:
+### 👉 [Launch the live tumor viewer](https://vanshika900.github.io/Breast_Cancer_AI/)
 
-| Group | What is measured |
-|---|---|
-| **Overlap quality** | Dice, IoU |
-| **Error trade-off** | Precision, Recall, Specificity, Accuracy |
-| **Voxel counts** | True Positives, False Positives, False Negatives |
-| **Tumor volume** | Ground-truth volume vs predicted volume (cm³) and the difference in % |
-| **Spatial agreement** | Correctly overlapping volume, % of ground truth covered, % of prediction that is correct |
-
-📊 **Overall results (mean over the test set):**
-
-| Metric | Validation | Test |
-|---|---|---|
-| Mean Dice | 0.785 | 0.776 |
-| Mean IoU | 0.671 | 0.681 |
-
----
-
-## 🧊 The interactive 3D viewer
-
-**▶️ Try it live: https://vanshika900.github.io/Breast_Cancer_AI/**
-
-Each tumor is reconstructed as a 3D surface in three colours:
+The browser-based viewer allows users to inspect 3D tumor segmentations and compare model predictions with expert annotations.
 
 | Colour | Meaning |
 |---|---|
-| 🟣 **Purple** | **Correct overlap.** The tumor was marked by both the expert and the model. |
-| 🔵 **Blue** | **Missed by the model.** Tumor is in the ground truth but the model didn't predict it. |
-| 🔴 **Red** | **Over-prediction.** The model predicted tumor where the ground truth has none. |
+| 🟣 Purple | Correct overlap between ground truth and prediction |
+| 🔵 Blue | Tumor missed by the model (false negative region) |
+| 🔴 Red | Region predicted as tumor but absent from ground truth (false positive region) |
 
-**Controls:** drag to rotate · scroll to zoom · right-drag to pan · tick or untick the three layers to isolate any one of them.
+**Viewer features:**
 
-**Features:** filter by dataset split (All / Validation / Test) · choose any patient from a dropdown · full metrics panel next to the 3D view · tumor volume comparison · dataset info for each case (split, image shape, voxel spacing, threshold, model).
-
-<table>
-<tr>
-<td width="50%"><img src="images/viewer_metrics_panel.png" alt="Viewer with metrics panel"/><br/><sub><b>Metrics panel</b> with volume comparison and spatial agreement for the selected patient.</sub></td>
-<td width="50%"><img src="images/viewer_patient_dropdown.png" alt="Patient selector"/><br/><sub><b>Patient selector.</b> Browse every case in the cohort.</sub></td>
-</tr>
-<tr>
-<td><img src="images/viewer_dataset_dropdown.png" alt="Dataset split filter"/><br/><sub><b>Split filter.</b> View All patients, Validation only, or Test only.</sub></td>
-<td><img src="images/viewer_prediction_view.png" alt="Model prediction layer"/><br/><sub><b>Prediction view.</b> Correct overlap (purple) plus false positives (red).</sub></td>
-</tr>
-<tr>
-<td><img src="images/viewer_ground_truth_view.png" alt="Ground truth layer"/><br/><sub><b>Ground-truth view.</b> Correct overlap (purple) plus missed tumor (blue).</sub></td>
-<td><img src="images/viewer_errors_only.png" alt="Errors only"/><br/><sub><b>Errors only.</b> Hide the overlap to see precisely where the model went wrong.</sub></td>
-</tr>
-</table>
+- Rotate, zoom and pan 3D tumor surfaces.
+- Select individual patients.
+- Filter by dataset split.
+- Inspect per-patient segmentation metrics.
+- Compare ground-truth and predicted tumor volumes.
+- Toggle overlap and error regions.
 
 ---
 
-## 📁 Repository structure
+## 📓 Notebooks
 
-```
+| Notebook | Description |
+|---|---|
+| [`01_ISPY1_Data_Exploration.ipynb`](01_ISPY1_Data_Exploration.ipynb) | Explores patient data, MRI volumes, tumor masks, scanner information and clinical variables. |
+| [`02_ISPY1_Data_Cleaning.ipynb`](02_ISPY1_Data_Cleaning.ipynb) | Cleans data and creates the patient-level master table with paths, clinical information and dataset splits. |
+| [`03_ISPY1_UNet_Training.ipynb`](03_ISPY1_UNet_Training.ipynb) | Prepares nnU-Net data and trains the 3D segmentation models. |
+| [`05_Segmentation_3D_Visualization.ipynb`](05_Segmentation_3D_Visualization.ipynb) | Evaluates segmentation predictions and creates the interactive 3D viewer. |
+| [`06_ISPY1_ViT_MAE.ipynb`](06_ISPY1_ViT_MAE.ipynb) | Exploratory and development workflow for ViT-MAE and pCR experiments. |
+| [`06_ISPY1_ViT_MAE_FINAL.ipynb`](06_ISPY1_ViT_MAE_FINAL.ipynb) | Final integrated workflow for segmentation evaluation, crop generation, ViT-MAE features and pCR classification. |
+
+---
+
+## 📁 Repository Structure
+
+```text
 Breast_Cancer_AI/
 ├── 01_ISPY1_Data_Exploration.ipynb
 ├── 02_ISPY1_Data_Cleaning.ipynb
 ├── 03_ISPY1_UNet_Training.ipynb
 ├── 05_Segmentation_3D_Visualization.ipynb
+├── 06_ISPY1_ViT_MAE.ipynb
+├── 06_ISPY1_ViT_MAE_FINAL.ipynb
 ├── docs/
-│   └── index.html          # the interactive 3D viewer (served by GitHub Pages)
-├── images/                 # screenshots used in this README
+│   └── index.html
+├── images/
+│   └── viewer screenshots
 ├── .gitignore
 └── README.md
 ```
 
-Notebook outputs are cleared before upload so that no patient-level information or personal file paths are published.
+Large datasets, trained checkpoints, prediction volumes, extracted crops and feature files are stored separately and are not included in the repository. Notebook outputs should be checked before committing to avoid publishing patient-level information, private paths or large generated artifacts.
 
 ---
 
-## 🚀 How to reproduce
+## 🚀 Reproducibility
 
-1. **Get the data** from its original source (see [The dataset](#-the-dataset)) and place it in your own Google Drive.
-2. **Open the notebooks in Google Colab**, mount your Drive, and run them in order: `01` → `02` → `03` → `05`.
-3. Install nnU-Net v2 in Colab when the training notebook asks for it (`pip install nnunetv2`).
-4. Update the data and output paths at the top of each notebook to match your own Drive layout.
-5. The last notebook exports the HTML viewer. Open the file in any modern browser.
+1. Clone this repository.
+2. Obtain the I-SPY1 portion of the [BreastDCEDL dataset](https://zenodo.org/records/17274053).
+3. Configure the dataset and project paths in the notebooks.
+4. Set up the required Python, PyTorch and nnU-Net v2 dependencies.
+5. Run data exploration and cleaning.
+6. Prepare the nnU-Net dataset and train the segmentation folds.
+7. Generate OOF training predictions and validation/test predictions.
+8. Generate tumor-aware crops using the predicted masks.
+9. Fine-tune ViT-MAE on training-patient crops and extract patient-level features.
+10. Run the final pCR classification notebook.
 
-> 💡 A GPU runtime (**Runtime → Change runtime type → GPU**) is strongly recommended for training.
+A GPU runtime is strongly recommended for segmentation training and ViT-MAE adaptation.
 
----
-
-## 🔭 Limitations and future work
-
-**Honest limitations**
-- One cohort (I-SPY1) only, with no external validation on an independent dataset yet.
-- Small-dataset setting: results can vary between patients, and very small or scattered tumor regions are the hardest cases (visible as the small blue and red fragments in the viewer).
-- Research prototype, not clinically validated.
-
-**Where this could go next**
-- 🔬 External validation on a different cohort such as MAMA-MIA.
-- 🧪 Benchmark nnU-Net against other segmentation architectures in a controlled comparison.
-- 📈 Use the predicted tumor masks to study volume and shape features against treatment response (pCR), since the clinical outcomes are already in the master table.
-- 🎯 Uncertainty estimates, to flag cases where the ensemble disagrees with itself.
+**Reproducibility note:** The final notebook can load previously generated checkpoints and feature files. To reproduce the complete workflow from scratch, verify that the required artifacts are generated using the documented data split and configuration. Results may vary with software versions, random seeds and hardware.
 
 ---
 
-## 📚 References and credits
+## ⚠️ Limitations and Future Work
 
-- Isensee, F. et al. *nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation.* **Nature Methods**, 2021.
-- I-SPY1 breast MRI data, via The Cancer Imaging Archive (TCIA).
-- Fridman, N., Solway, B., Fridman, T., Barnea, I., Goldstein, A. *BreastDCEDL: A Comprehensive Breast Cancer DCE-MRI Dataset and Transformer Implementation for Treatment Response Prediction.* arXiv:2506.12190, 2025. https://arxiv.org/abs/2506.12190
+- The experiments use a relatively small I-SPY1 cohort.
+- No external validation on an independent cohort has been performed.
+- Imaging-only representations showed limited pCR discrimination in the final test evaluation.
+- The combined model did not outperform the clinical-only model in overall test ROC-AUC.
+- The number of pCR-positive patients in the test set is small, so individual predictions have a substantial effect on reported metrics.
+- Further work could investigate alternative imaging normalization, tumor localization, representation learning objectives and larger independent datasets.
+- External validation is necessary before any consideration of clinical applicability.
 
-**Author:** Vanshika · B.Tech, Jaypee Institute of Information Technology, Noida
+---
 
-📬 Questions or feedback? Open an issue or reach out via my GitHub profile.
+## 📚 References and Credits
+
+1. Isensee, F. et al. **nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation.** *Nature Methods*, 2021.
+2. He, K. et al. **Masked Autoencoders Are Scalable Vision Learners.** *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*, 2022.
+3. Fridman, N. et al. **BreastDCEDL: A Comprehensive Breast Cancer DCE-MRI Dataset and Transformer Implementation for Treatment Response Prediction.** 2025. [arXiv:2506.12190](https://arxiv.org/abs/2506.12190).
+4. [BreastDCEDL dataset release](https://zenodo.org/records/17274053).
+5. [BreastDCEDL authors' code repository](https://github.com/naomifridman/BreastDCEDL).
+
+---
+
+## Author
+
+**Vanshika**  
+B.Tech, Computer Science and Engineering
+
+GitHub: [@vanshika900](https://github.com/vanshika900)
+
+[Project repository](https://github.com/vanshika900/Breast_Cancer_AI)
 
 <div align="center">
 
-*Built to help make tumor measurement faster, clearer, and easier to trust.* 🎗️
+*An academic research project exploring automated tumor segmentation and multimodal breast cancer treatment-response prediction.*
 
 </div>
